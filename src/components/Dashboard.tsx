@@ -341,7 +341,7 @@ export default function Dashboard({
                   <Box sx={columns}>
                     <Panel
                       title="Plan your Christmas"
-                      subtitle="Choose a year and your participants. Couples and excluded pairs will never draw each other."
+                      subtitle="Choose a year and your participants. Couples and excluded pairs will never draw each other. Two people drawing each other is avoided whenever possible."
                     >
                       <Stack spacing={3}>
                         <TextField

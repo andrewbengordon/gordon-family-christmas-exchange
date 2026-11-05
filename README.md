@@ -6,7 +6,7 @@ A responsive family gift exchange app built with Next.js, MUI, and Supabase.
 
 - **Organizer dashboard:** remember family members, select each year’s participants, and manage Google login access and delegate admin access. Pausing participation does not remove someone’s access to their history.
 - **Couples and exclusions:** prevent selected pairs from drawing each other in either direction.
-- **History-aware matching:** everyone gives and receives once, with no self-matches. Draws minimize repeats across earlier Christmases and can strictly avoid last year’s recipient. Impossible draws stop without saving.
+- **History-aware matching:** everyone gives and receives once, with no self-matches. Draws minimize reciprocal pairs (two people drawing each other), then repeats across earlier Christmases and can strictly avoid last year’s recipient. Impossible draws stop without saving.
 - **Private participant view:** allowlisted family members sign in with Google and click a gift illustration to reveal their current recipient. Each person can also see their own past assignments.
 - **Saved Christmases:** organizers can review all assignments and delete a year after confirmation. Deleting a year removes its assignments but keeps people, login access, and exclusions.
 - **Light and dark themes:** responsive layouts with a theme switch that remembers your preference.

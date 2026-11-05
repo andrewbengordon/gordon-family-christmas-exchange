@@ -97,7 +97,7 @@ test("unavoidable repeats achieve a globally minimal repeat count and recency co
       repeats += Number(past.length > 0);
       cost += past.reduce((n, h) => n + h.year - 2022, 0);
     }
-    return repeats * 1000 + cost;
+    return reciprocalCount(pairs) * 1000000 + repeats * 1000 + cost;
   }
   let best = Infinity;
   function enumerate(chosen: string[]) {
@@ -141,4 +141,110 @@ test("history preferences never relax hard previous-year or couple exclusions", 
       ),
     /No valid/,
   );
+});
+
+function reciprocalCount(pairs: { giver_id: string; recipient_id: string }[]) {
+  const recipients = new Map(pairs.map((p) => [p.giver_id, p.recipient_id]));
+  return (
+    pairs.filter((p) => recipients.get(p.recipient_id) === p.giver_id).length /
+    2
+  );
+}
+test("avoids reciprocal assignments even when all non-reciprocal choices repeat history", () => {
+  const ids = ["a", "b", "c", "d"];
+  const fresh = new Map([
+    ["a", "b"],
+    ["b", "a"],
+    ["c", "d"],
+    ["d", "c"],
+  ]);
+  const history = ids.flatMap((giver_id) =>
+    ids
+      .filter((r) => r !== giver_id && fresh.get(giver_id) !== r)
+      .map((recipient_id) => ({ giver_id, recipient_id, year: 2025 })),
+  );
+  for (let i = 0; i < 30; i++)
+    assert.equal(reciprocalCount(generateAssignments(ids, [], [], history)), 0);
+});
+test("allows reciprocal assignments when hard restrictions require them", () => {
+  const ids = ["a", "b", "c", "d"];
+  const exclusions = ["a", "b"].flatMap((person_a) =>
+    ["c", "d"].map((person_b) => ({ person_a, person_b })),
+  );
+  const result = generateAssignments(ids, exclusions);
+  assert.equal(reciprocalCount(result), 2);
+  assert.equal(new Set(result.map((p) => p.recipient_id)).size, 4);
+  const previous = [{ giver_id: "a", recipient_id: "b" }];
+  assert.throws(
+    () => generateAssignments(ids, exclusions, previous),
+    /No valid/,
+  );
+});
+test("matches exhaustive optimum for reciprocal pairs, history repeats, and recency under hard rules", () => {
+  const ids = ["a", "b", "c", "d", "e", "f"];
+  for (let scenario = 0; scenario < 20; scenario++) {
+    const all = ids.flatMap((giver_id, g) =>
+      ids
+        .filter((r) => r !== giver_id)
+        .map((recipient_id) => ({
+          giver_id,
+          recipient_id,
+          year: 2023 + ((g + ids.indexOf(recipient_id)) % 3),
+        })),
+    );
+    const history = all.filter((_, i) => (i + scenario) % 4 !== 0);
+    const previous = all.filter((_, i) => (i + scenario) % 7 === 0);
+    const exclusions = scenario % 2 ? [{ person_a: "a", person_b: "c" }] : [];
+    function score(pairs: { giver_id: string; recipient_id: string }[]) {
+      const matches = pairs.map((p) =>
+        history.filter(
+          (h) => h.giver_id === p.giver_id && h.recipient_id === p.recipient_id,
+        ),
+      );
+      return (
+        reciprocalCount(pairs) * 1000000 +
+        matches.filter((m) => m.length).length * 1000 +
+        matches.flat().reduce((s, h) => s + h.year - 2022, 0)
+      );
+    }
+    let best = Infinity;
+    function enumerate(chosen: string[]) {
+      if (chosen.length === ids.length) {
+        best = Math.min(
+          best,
+          score(
+            ids.map((giver_id, i) => ({ giver_id, recipient_id: chosen[i] })),
+          ),
+        );
+        return;
+      }
+      const g = ids[chosen.length];
+      for (const r of ids)
+        if (
+          r !== g &&
+          !chosen.includes(r) &&
+          !previous.some((p) => p.giver_id === g && p.recipient_id === r) &&
+          !exclusions.some(
+            (e) =>
+              [e.person_a, e.person_b].includes(g) &&
+              [e.person_a, e.person_b].includes(r),
+          )
+        )
+          enumerate([...chosen, r]);
+    }
+    enumerate([]);
+    for (let trial = 0; trial < 3; trial++) {
+      if (best === Infinity)
+        assert.throws(
+          () => generateAssignments(ids, exclusions, previous, history),
+          /No valid/,
+        );
+      else
+        assert.equal(
+          score(generateAssignments(ids, exclusions, previous, history)),
+          best,
+          `scenario ${scenario}`,
+        );
+    }
+  }
 });
